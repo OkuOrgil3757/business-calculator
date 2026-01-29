@@ -11,6 +11,11 @@ import json
 
 app = Flask(__name__)
 
+@app.template_filter('money')
+def money_filter(value):
+    """Format number with commas and 2 decimal places."""
+    return "{:,.2f}".format(value)
+
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html>
@@ -376,11 +381,11 @@ HTML_TEMPLATE = '''
                     <tr>
                         <td class="name">{{ calc.name }}</td>
                         <td>{{ calc.units }}</td>
-                        <td>${{ "%.2f"|format(calc.cost_per_unit) }}</td>
-                        <td>${{ "%.2f"|format(calc.selling_price) }}</td>
+                        <td>${{ calc.cost_per_unit|money }}</td>
+                        <td>${{ calc.selling_price|money }}</td>
                         <td>{{ "%.1f"|format(calc.profit_margin) }}%</td>
                         <td class="{{ 'profit-positive' if calc.gross_profit >= 0 else 'profit-negative' }}">
-                            ${{ "%.2f"|format(calc.gross_profit) }}
+                            ${{ calc.gross_profit|money }}
                         </td>
                         <td>
                             <form method="POST" action="/delete/{{ loop.index0 }}" style="display:inline;">
@@ -404,19 +409,19 @@ HTML_TEMPLATE = '''
             <div class="results-grid">
                 <div class="result-box red">
                     <div class="label">Total Costs</div>
-                    <div class="value">${{ "%.2f"|format(result.total_costs) }}</div>
+                    <div class="value">${{ result.total_costs|money }}</div>
                 </div>
                 <div class="result-box orange">
                     <div class="label">Break-even Price</div>
-                    <div class="value">${{ "%.2f"|format(result.breakeven_price) }}</div>
+                    <div class="value">${{ result.breakeven_price|money }}</div>
                 </div>
                 <div class="result-box cyan">
                     <div class="label">Revenue</div>
-                    <div class="value">${{ "%.2f"|format(result.total_revenue) }}</div>
+                    <div class="value">${{ result.total_revenue|money }}</div>
                 </div>
                 <div class="result-box green">
                     <div class="label">Profit</div>
-                    <div class="value">${{ "%.2f"|format(result.gross_profit) }}</div>
+                    <div class="value">${{ result.gross_profit|money }}</div>
                 </div>
             </div>
 
@@ -427,15 +432,15 @@ HTML_TEMPLATE = '''
                 </div>
                 <div class="result-box cyan">
                     <div class="label">Cost per Unit</div>
-                    <div class="value">${{ "%.2f"|format(result.cost_per_unit) }}</div>
+                    <div class="value">${{ result.cost_per_unit|money }}</div>
                 </div>
                 <div class="result-box green">
                     <div class="label">Selling Price</div>
-                    <div class="value">${{ "%.2f"|format(result.selling_price) }}</div>
+                    <div class="value">${{ result.selling_price|money }}</div>
                 </div>
                 <div class="result-box orange">
                     <div class="label">Profit per Unit</div>
-                    <div class="value">${{ "%.2f"|format(result.selling_price - result.cost_per_unit) }}</div>
+                    <div class="value">${{ (result.selling_price - result.cost_per_unit)|money }}</div>
                 </div>
             </div>
 
@@ -444,23 +449,23 @@ HTML_TEMPLATE = '''
                     <h3 style="color: #7b2ff7; margin-bottom: 15px;">Variable Costs (per unit)</h3>
                     <div class="breakdown-row">
                         <span class="item">Product / Material</span>
-                        <span class="amount">${{ "%.2f"|format(result.product_cost) }}</span>
+                        <span class="amount">${{ result.product_cost|money }}</span>
                     </div>
                     <div class="breakdown-row">
                         <span class="item">Transportation / Shipping</span>
-                        <span class="amount">${{ "%.2f"|format(result.transportation) }}</span>
+                        <span class="amount">${{ result.transportation|money }}</span>
                     </div>
                     <div class="breakdown-row">
                         <span class="item">Tax / Fees</span>
-                        <span class="amount">${{ "%.2f"|format(result.tax) }}</span>
+                        <span class="amount">${{ result.tax|money }}</span>
                     </div>
                     <div class="breakdown-row">
                         <span class="item">Other Variable</span>
-                        <span class="amount">${{ "%.2f"|format(result.other_costs) }}</span>
+                        <span class="amount">${{ result.other_costs|money }}</span>
                     </div>
                     <div class="breakdown-row total">
                         <span class="item">Total Variable (x{{ result.units }})</span>
-                        <span class="amount">${{ "%.2f"|format((result.product_cost + result.transportation + result.tax + result.other_costs) * result.units) }}</span>
+                        <span class="amount">${{ ((result.product_cost + result.transportation + result.tax + result.other_costs) * result.units)|money }}</span>
                     </div>
                 </div>
 
@@ -468,23 +473,23 @@ HTML_TEMPLATE = '''
                     <h3 style="color: #7b2ff7; margin-bottom: 15px;">Fixed Costs (total)</h3>
                     <div class="breakdown-row">
                         <span class="item">Staff Salaries</span>
-                        <span class="amount">${{ "%.2f"|format(result.staff_salary) }}</span>
+                        <span class="amount">${{ result.staff_salary|money }}</span>
                     </div>
                     <div class="breakdown-row">
                         <span class="item">Marketing / Advertising</span>
-                        <span class="amount">${{ "%.2f"|format(result.marketing) }}</span>
+                        <span class="amount">${{ result.marketing|money }}</span>
                     </div>
                     <div class="breakdown-row">
                         <span class="item">Rent / Lease</span>
-                        <span class="amount">${{ "%.2f"|format(result.rent) }}</span>
+                        <span class="amount">${{ result.rent|money }}</span>
                     </div>
                     <div class="breakdown-row">
                         <span class="item">Utilities</span>
-                        <span class="amount">${{ "%.2f"|format(result.utilities) }}</span>
+                        <span class="amount">${{ result.utilities|money }}</span>
                     </div>
                     <div class="breakdown-row total">
                         <span class="item">Total Fixed</span>
-                        <span class="amount">${{ "%.2f"|format(result.staff_salary + result.marketing + result.rent + result.utilities) }}</span>
+                        <span class="amount">${{ (result.staff_salary + result.marketing + result.rent + result.utilities)|money }}</span>
                     </div>
                 </div>
             </div>
@@ -493,27 +498,27 @@ HTML_TEMPLATE = '''
                 <h3>Pricing Guide - What to charge for different margins</h3>
                 <div class="pricing-row">
                     <span class="margin">Break-even (0% profit)</span>
-                    <span class="price">${{ "%.2f"|format(result.breakeven_price) }} per unit</span>
+                    <span class="price">${{ result.breakeven_price|money }} per unit</span>
                 </div>
                 <div class="pricing-row">
                     <span class="margin">20% profit margin</span>
-                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.8) }} per unit</span>
+                    <span class="price">${{ (result.cost_per_unit / 0.8)|money }} per unit</span>
                 </div>
                 <div class="pricing-row">
                     <span class="margin">30% profit margin</span>
-                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.7) }} per unit</span>
+                    <span class="price">${{ (result.cost_per_unit / 0.7)|money }} per unit</span>
                 </div>
                 <div class="pricing-row">
                     <span class="margin">40% profit margin</span>
-                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.6) }} per unit</span>
+                    <span class="price">${{ (result.cost_per_unit / 0.6)|money }} per unit</span>
                 </div>
                 <div class="pricing-row">
                     <span class="margin">50% profit margin</span>
-                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.5) }} per unit</span>
+                    <span class="price">${{ (result.cost_per_unit / 0.5)|money }} per unit</span>
                 </div>
                 <div class="pricing-row">
                     <span class="margin">60% profit margin</span>
-                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.4) }} per unit</span>
+                    <span class="price">${{ (result.cost_per_unit / 0.4)|money }} per unit</span>
                 </div>
             </div>
 
