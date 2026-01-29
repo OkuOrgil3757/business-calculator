@@ -137,8 +137,101 @@ HTML_TEMPLATE = '''
             margin-left: 10px;
         }
 
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* Results Section */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .result-box {
+            background: rgba(20, 20, 50, 0.8);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .result-box .label {
+            color: #888;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .result-box .value {
+            font-size: 1.6em;
+            font-weight: bold;
+        }
+
+        .result-box.cyan .value { color: #00d4ff; }
+        .result-box.green .value { color: #00ff88; }
+        .result-box.orange .value { color: #ffaa00; }
+        .result-box.red .value { color: #ff4466; }
+        .result-box.purple .value { color: #7b2ff7; }
+
+        /* Breakdown */
+        .breakdown {
+            margin-top: 20px;
+        }
+
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .breakdown-row .item { color: #aaa; }
+        .breakdown-row .amount { font-weight: 500; }
+        .breakdown-row.total {
+            border-top: 2px solid #7b2ff7;
+            padding-top: 15px;
+            margin-top: 10px;
+        }
+        .breakdown-row.total .item,
+        .breakdown-row.total .amount {
+            color: #7b2ff7;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        /* Pricing Guide */
+        .pricing-guide {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 47, 247, 0.1));
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .pricing-guide h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .pricing-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .pricing-row:last-child { border: none; }
+        .pricing-row .margin { color: #888; }
+        .pricing-row .price { color: #00ff88; font-weight: 600; }
+
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr 1fr; }
+            .results-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
@@ -163,7 +256,7 @@ HTML_TEMPLATE = '''
                 </div>
                 <div class="form-group">
                     <label>Selling Price per Unit ($)</label>
-                    <input type="number" name="selling_price" value="0" step="0.01">
+                    <input type="number" name="selling_price" value="0" step="0.01" placeholder="Leave 0 to auto-calculate">
                 </div>
             </div>
 
@@ -220,6 +313,88 @@ HTML_TEMPLATE = '''
                 <button type="reset" class="btn btn-secondary">Clear</button>
             </div>
         </form>
+
+        {% if result %}
+        <div class="card">
+            <div class="card-header">
+                <h2>{{ result.name }} - Analysis</h2>
+                <span style="color: #888;">{{ result.units }} units</span>
+            </div>
+
+            <div class="results-grid">
+                <div class="result-box red">
+                    <div class="label">Total Costs</div>
+                    <div class="value">${{ "%.2f"|format(result.total_costs) }}</div>
+                </div>
+                <div class="result-box orange">
+                    <div class="label">Break-even Price</div>
+                    <div class="value">${{ "%.2f"|format(result.breakeven_price) }}</div>
+                </div>
+                <div class="result-box cyan">
+                    <div class="label">Revenue</div>
+                    <div class="value">${{ "%.2f"|format(result.total_revenue) }}</div>
+                </div>
+                <div class="result-box green">
+                    <div class="label">Profit</div>
+                    <div class="value">${{ "%.2f"|format(result.gross_profit) }}</div>
+                </div>
+            </div>
+
+            <div class="results-grid">
+                <div class="result-box purple">
+                    <div class="label">Profit Margin</div>
+                    <div class="value">{{ "%.1f"|format(result.profit_margin) }}%</div>
+                </div>
+                <div class="result-box cyan">
+                    <div class="label">Cost per Unit</div>
+                    <div class="value">${{ "%.2f"|format(result.cost_per_unit) }}</div>
+                </div>
+                <div class="result-box green">
+                    <div class="label">Selling Price</div>
+                    <div class="value">${{ "%.2f"|format(result.selling_price) }}</div>
+                </div>
+                <div class="result-box orange">
+                    <div class="label">Profit per Unit</div>
+                    <div class="value">${{ "%.2f"|format(result.selling_price - result.cost_per_unit) }}</div>
+                </div>
+            </div>
+
+            <div class="pricing-guide">
+                <h3>Pricing Guide - What to charge for different margins</h3>
+                <div class="pricing-row">
+                    <span class="margin">Break-even (0% profit)</span>
+                    <span class="price">${{ "%.2f"|format(result.breakeven_price) }} per unit</span>
+                </div>
+                <div class="pricing-row">
+                    <span class="margin">20% profit margin</span>
+                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.8) }} per unit</span>
+                </div>
+                <div class="pricing-row">
+                    <span class="margin">30% profit margin</span>
+                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.7) }} per unit</span>
+                </div>
+                <div class="pricing-row">
+                    <span class="margin">40% profit margin</span>
+                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.6) }} per unit</span>
+                </div>
+                <div class="pricing-row">
+                    <span class="margin">50% profit margin</span>
+                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.5) }} per unit</span>
+                </div>
+                <div class="pricing-row">
+                    <span class="margin">60% profit margin</span>
+                    <span class="price">${{ "%.2f"|format(result.cost_per_unit / 0.4) }} per unit</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <form method="POST" action="/save" style="display: inline;">
+                    <input type="hidden" name="result_data" value='{{ result_json }}'>
+                    <button type="submit" class="btn btn-primary">Save Calculation</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </body>
 </html>
@@ -228,7 +403,7 @@ HTML_TEMPLATE = '''
 @app.route('/')
 def index():
     calculations = load_calculations()
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None)
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='')
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
@@ -249,11 +424,25 @@ def calculate():
     }
 
     calc = BusinessCalculator(data)
+
+    # Auto-calculate selling price if not provided
+    if data['selling_price'] == 0:
+        data['selling_price'] = calc.price_for_margin(data['target_margin'])
+        calc = BusinessCalculator(data)
+
     result = calc.to_dict()
     result['id'] = data['id']
 
     calculations = load_calculations()
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=result)
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=result, result_json=json.dumps(result))
+
+@app.route('/save', methods=['POST'])
+def save():
+    result_data = json.loads(request.form['result_data'])
+    calculations = load_calculations()
+    calculations.append(result_data)
+    save_calculations(calculations)
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     print("\n" + "="*50)
