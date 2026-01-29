@@ -292,15 +292,15 @@ HTML_TEMPLATE = '''
             <div class="form-grid">
                 <div class="form-group">
                     <label>Product / Service Name</label>
-                    <input type="text" name="name" placeholder="e.g. Product A" required>
+                    <input type="text" name="name" placeholder="e.g. Product A" value="{{ form_data.name or '' }}" required>
                 </div>
                 <div class="form-group">
                     <label>Number of Units</label>
-                    <input type="number" name="units" value="100" min="1" required>
+                    <input type="number" name="units" value="{{ form_data.units or 100 }}" min="1" required>
                 </div>
                 <div class="form-group">
                     <label>Selling Price per Unit ($)</label>
-                    <input type="number" name="selling_price" value="0" step="0.01" placeholder="Leave 0 to auto-calculate">
+                    <input type="number" name="selling_price" value="{{ form_data.selling_price or 0 }}" step="0.01" placeholder="Leave 0 to auto-calculate">
                 </div>
             </div>
 
@@ -308,19 +308,23 @@ HTML_TEMPLATE = '''
             <div class="form-grid">
                 <div class="form-group">
                     <label>Product / Material Cost ($)</label>
-                    <input type="number" name="product_cost" value="0" step="0.01">
+                    <input type="number" name="product_cost" value="{{ form_data.product_cost or 0 }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label>Transportation / Shipping ($)</label>
-                    <input type="number" name="transportation" value="0" step="0.01">
+                    <input type="number" name="transportation" value="{{ form_data.transportation or 0 }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label>Tax / Fees per Unit ($)</label>
-                    <input type="number" name="tax" value="0" step="0.01">
+                    <input type="number" name="tax" value="{{ form_data.tax or 0 }}" step="0.01">
                 </div>
                 <div class="form-group">
-                    <label>Other Variable Costs ($)</label>
-                    <input type="number" name="other_costs" value="0" step="0.01">
+                    <label>Other Cost Name</label>
+                    <input type="text" name="other_cost_name" placeholder="e.g. Packaging, Insurance" value="{{ form_data.other_cost_name or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>{{ form_data.other_cost_name or 'Other' }} Cost ($)</label>
+                    <input type="number" name="other_costs" value="{{ form_data.other_costs or 0 }}" step="0.01">
                 </div>
             </div>
 
@@ -328,19 +332,19 @@ HTML_TEMPLATE = '''
             <div class="form-grid">
                 <div class="form-group">
                     <label>Staff Salaries ($)</label>
-                    <input type="number" name="staff_salary" value="0" step="0.01">
+                    <input type="number" name="staff_salary" value="{{ form_data.staff_salary or 0 }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label>Marketing / Advertising ($)</label>
-                    <input type="number" name="marketing" value="0" step="0.01">
+                    <input type="number" name="marketing" value="{{ form_data.marketing or 0 }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label>Rent / Lease ($)</label>
-                    <input type="number" name="rent" value="0" step="0.01">
+                    <input type="number" name="rent" value="{{ form_data.rent or 0 }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label>Utilities ($)</label>
-                    <input type="number" name="utilities" value="0" step="0.01">
+                    <input type="number" name="utilities" value="{{ form_data.utilities or 0 }}" step="0.01">
                 </div>
             </div>
 
@@ -348,7 +352,7 @@ HTML_TEMPLATE = '''
             <div class="form-grid">
                 <div class="form-group">
                     <label>Target Profit Margin (%)</label>
-                    <input type="number" name="target_margin" value="30" min="0" max="99">
+                    <input type="number" name="target_margin" value="{{ form_data.target_margin if form_data.target_margin is not none else 30 }}" min="0" max="99">
                 </div>
             </div>
 
@@ -460,7 +464,7 @@ HTML_TEMPLATE = '''
                         <span class="amount">${{ result.tax|money }}</span>
                     </div>
                     <div class="breakdown-row">
-                        <span class="item">Other Variable</span>
+                        <span class="item">{{ result.other_cost_name or 'Other Variable' }}</span>
                         <span class="amount">${{ result.other_costs|money }}</span>
                     </div>
                     <div class="breakdown-row total">
@@ -538,17 +542,18 @@ HTML_TEMPLATE = '''
 @app.route('/')
 def index():
     calculations = load_calculations()
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='')
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='', form_data={})
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
-    data = {
-        "id": generate_id(),
-        "name": request.form['name'],
+    # Store form data to keep values after calculation
+    form_data = {
+        "name": request.form.get('name', ''),
         "units": int(request.form.get('units', 1) or 1),
         "product_cost": float(request.form.get('product_cost', 0) or 0),
         "transportation": float(request.form.get('transportation', 0) or 0),
         "tax": float(request.form.get('tax', 0) or 0),
+        "other_cost_name": request.form.get('other_cost_name', ''),
         "other_costs": float(request.form.get('other_costs', 0) or 0),
         "staff_salary": float(request.form.get('staff_salary', 0) or 0),
         "marketing": float(request.form.get('marketing', 0) or 0),
@@ -558,18 +563,28 @@ def calculate():
         "target_margin": float(request.form.get('target_margin', 30) or 30),
     }
 
+    data = {
+        "id": generate_id(),
+        **form_data
+    }
+
     calc = BusinessCalculator(data)
 
     # Auto-calculate selling price if not provided
+    original_selling_price = form_data['selling_price']
     if data['selling_price'] == 0:
         data['selling_price'] = calc.price_for_margin(data['target_margin'])
         calc = BusinessCalculator(data)
 
+    # Keep original selling price in form (0 if auto-calculated)
+    form_data['selling_price'] = original_selling_price
+
     result = calc.to_dict()
     result['id'] = data['id']
+    result['other_cost_name'] = form_data['other_cost_name']
 
     calculations = load_calculations()
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=result, result_json=json.dumps(result))
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=result, result_json=json.dumps(result), form_data=form_data)
 
 @app.route('/save', methods=['POST'])
 def save():
