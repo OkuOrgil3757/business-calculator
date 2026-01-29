@@ -439,6 +439,56 @@ HTML_TEMPLATE = '''
                 </div>
             </div>
 
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                <div class="breakdown">
+                    <h3 style="color: #7b2ff7; margin-bottom: 15px;">Variable Costs (per unit)</h3>
+                    <div class="breakdown-row">
+                        <span class="item">Product / Material</span>
+                        <span class="amount">${{ "%.2f"|format(result.product_cost) }}</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span class="item">Transportation / Shipping</span>
+                        <span class="amount">${{ "%.2f"|format(result.transportation) }}</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span class="item">Tax / Fees</span>
+                        <span class="amount">${{ "%.2f"|format(result.tax) }}</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span class="item">Other Variable</span>
+                        <span class="amount">${{ "%.2f"|format(result.other_costs) }}</span>
+                    </div>
+                    <div class="breakdown-row total">
+                        <span class="item">Total Variable (x{{ result.units }})</span>
+                        <span class="amount">${{ "%.2f"|format((result.product_cost + result.transportation + result.tax + result.other_costs) * result.units) }}</span>
+                    </div>
+                </div>
+
+                <div class="breakdown">
+                    <h3 style="color: #7b2ff7; margin-bottom: 15px;">Fixed Costs (total)</h3>
+                    <div class="breakdown-row">
+                        <span class="item">Staff Salaries</span>
+                        <span class="amount">${{ "%.2f"|format(result.staff_salary) }}</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span class="item">Marketing / Advertising</span>
+                        <span class="amount">${{ "%.2f"|format(result.marketing) }}</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span class="item">Rent / Lease</span>
+                        <span class="amount">${{ "%.2f"|format(result.rent) }}</span>
+                    </div>
+                    <div class="breakdown-row">
+                        <span class="item">Utilities</span>
+                        <span class="amount">${{ "%.2f"|format(result.utilities) }}</span>
+                    </div>
+                    <div class="breakdown-row total">
+                        <span class="item">Total Fixed</span>
+                        <span class="amount">${{ "%.2f"|format(result.staff_salary + result.marketing + result.rent + result.utilities) }}</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="pricing-guide">
                 <h3>Pricing Guide - What to charge for different margins</h3>
                 <div class="pricing-row">
