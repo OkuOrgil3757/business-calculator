@@ -229,6 +229,45 @@ HTML_TEMPLATE = '''
         .pricing-row .margin { color: #888; }
         .pricing-row .price { color: #00ff88; font-weight: 600; }
 
+        /* History Table */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th {
+            text-align: left;
+            padding: 12px;
+            color: #888;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .history-table td {
+            padding: 15px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .history-table tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .history-table .name { color: #00d4ff; font-weight: 500; }
+        .history-table .profit-positive { color: #00ff88; }
+        .history-table .profit-negative { color: #ff4466; }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr 1fr; }
             .results-grid { grid-template-columns: 1fr 1fr; }
@@ -313,6 +352,47 @@ HTML_TEMPLATE = '''
                 <button type="reset" class="btn btn-secondary">Clear</button>
             </div>
         </form>
+
+        {% if calculations %}
+        <div class="card">
+            <div class="card-header">
+                <h2>Saved Calculations</h2>
+                <span style="color: #888;">{{ calculations|length }} record(s)</span>
+            </div>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Units</th>
+                        <th>Cost/Unit</th>
+                        <th>Sell Price</th>
+                        <th>Margin</th>
+                        <th>Total Profit</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for calc in calculations %}
+                    <tr>
+                        <td class="name">{{ calc.name }}</td>
+                        <td>{{ calc.units }}</td>
+                        <td>${{ "%.2f"|format(calc.cost_per_unit) }}</td>
+                        <td>${{ "%.2f"|format(calc.selling_price) }}</td>
+                        <td>{{ "%.1f"|format(calc.profit_margin) }}%</td>
+                        <td class="{{ 'profit-positive' if calc.gross_profit >= 0 else 'profit-negative' }}">
+                            ${{ "%.2f"|format(calc.gross_profit) }}
+                        </td>
+                        <td>
+                            <form method="POST" action="/delete/{{ loop.index0 }}" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-small">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
 
         {% if result %}
         <div class="card">
@@ -442,6 +522,14 @@ def save():
     calculations = load_calculations()
     calculations.append(result_data)
     save_calculations(calculations)
+    return redirect(url_for('index'))
+
+@app.route('/delete/<int:index>', methods=['POST'])
+def delete(index):
+    calculations = load_calculations()
+    if 0 <= index < len(calculations):
+        calculations.pop(index)
+        save_calculations(calculations)
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
