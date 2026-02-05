@@ -93,6 +93,41 @@ class BusinessCalculator:
             return float('inf')
         return self.total_fixed_costs / profit_per_unit
 
+    def scenario_analysis(self, percentages=None):
+        """Create scenarios at different volume percentages.
+
+        Fixed costs stay constant; variable costs scale with units.
+        Returns a list of scenario dicts.
+        """
+        if percentages is None:
+            percentages = [25, 50, 100, 150, 200, 300]
+
+        variable_per_unit = self.product_cost + self.transportation + self.tax + self.other_costs
+        fixed = self.total_fixed_costs
+        scenarios = []
+
+        for pct in percentages:
+            units = max(1, round(self.units * pct / 100))
+            total_variable = variable_per_unit * units
+            total_costs = fixed + total_variable
+            cost_per_unit = total_costs / units if units > 0 else 0
+            revenue = self.selling_price * units
+            profit = revenue - total_costs
+            margin = (profit / revenue * 100) if revenue > 0 else 0
+
+            scenarios.append({
+                'pct': pct,
+                'units': units,
+                'total_costs': total_costs,
+                'cost_per_unit': cost_per_unit,
+                'revenue': revenue,
+                'profit': profit,
+                'margin': margin,
+                'is_base': pct == 100,
+            })
+
+        return scenarios
+
     def to_dict(self):
         """Convert to dictionary for storage."""
         return {

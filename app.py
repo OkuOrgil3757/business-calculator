@@ -273,6 +273,49 @@ HTML_TEMPLATE = '''
             color: #666;
         }
 
+        /* Scenario Analysis Table */
+        .scenario-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .scenario-table th {
+            text-align: right;
+            padding: 10px 12px;
+            color: #888;
+            font-size: 0.78em;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .scenario-table th:first-child { text-align: left; }
+
+        .scenario-table td {
+            text-align: right;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.95em;
+        }
+
+        .scenario-table td:first-child { text-align: left; }
+
+        .scenario-table tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .scenario-table .base-row {
+            background: rgba(0, 212, 255, 0.1);
+            font-weight: 600;
+        }
+
+        .scenario-table .base-row td {
+            border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .scenario-table .scenario-profit-positive { color: #00ff88; }
+        .scenario-table .scenario-profit-negative { color: #ff4466; }
+
         /* Comparison checkbox */
         .compare-checkbox {
             width: 18px;
@@ -643,6 +686,39 @@ HTML_TEMPLATE = '''
                 </div>
             </div>
 
+            {% if scenarios %}
+            <div style="margin-top: 25px;">
+                <h3 style="color: #00d4ff; margin-bottom: 12px;">Volume Scenario Analysis</h3>
+                <p style="color: #666; font-size: 0.85em; margin-bottom: 15px;">How metrics change at different production volumes (fixed costs stay constant)</p>
+                <table class="scenario-table">
+                    <thead>
+                        <tr>
+                            <th>Volume %</th>
+                            <th>Units</th>
+                            <th>Total Costs</th>
+                            <th>Cost/Unit</th>
+                            <th>Revenue</th>
+                            <th>Profit</th>
+                            <th>Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in scenarios %}
+                        <tr class="{{ 'base-row' if s.is_base else '' }}">
+                            <td>{{ s.pct }}%{{ ' (current)' if s.is_base else '' }}</td>
+                            <td>{{ "{:,}"|format(s.units) }}</td>
+                            <td>${{ s.total_costs|money }}</td>
+                            <td>${{ s.cost_per_unit|money }}</td>
+                            <td>${{ s.revenue|money }}</td>
+                            <td class="{{ 'scenario-profit-positive' if s.profit >= 0 else 'scenario-profit-negative' }}">${{ s.profit|money }}</td>
+                            <td class="{{ 'scenario-profit-positive' if s.margin >= 0 else 'scenario-profit-negative' }}">{{ "%.1f"|format(s.margin) }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
             <div style="margin-top: 20px;">
                 <form method="POST" action="/save" style="display: inline;">
                     <input type="hidden" name="result_data" value='{{ result_json }}'>
@@ -700,7 +776,7 @@ HTML_TEMPLATE = '''
 @app.route('/')
 def index():
     calculations = load_calculations()
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='', form_data={}, comparison=None)
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='', form_data={}, scenarios=None, comparison=None)
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
@@ -741,8 +817,10 @@ def calculate():
     result['id'] = data['id']
     result['other_cost_name'] = form_data['other_cost_name']
 
+    scenarios = calc.scenario_analysis()
+
     calculations = load_calculations()
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=result, result_json=json.dumps(result), form_data=form_data, comparison=None)
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=result, result_json=json.dumps(result), form_data=form_data, scenarios=scenarios, comparison=None)
 
 @app.route('/compare', methods=['POST'])
 def compare():
@@ -796,7 +874,7 @@ def compare():
         'diffs': diffs,
     }
 
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='', form_data={}, comparison=comparison)
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='', form_data={}, comparison=comparison, scenarios=None)
 
 @app.route('/save', methods=['POST'])
 def save():
