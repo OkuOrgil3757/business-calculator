@@ -294,6 +294,68 @@ HTML_TEMPLATE = '''
             box-shadow: none;
         }
 
+        /* Comparison Display */
+        .compare-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 0;
+        }
+
+        .compare-column {
+            padding: 0 15px;
+        }
+
+        .compare-column h3 {
+            color: #00d4ff;
+            font-size: 1.2em;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+            text-align: center;
+        }
+
+        .compare-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .compare-row .metric-label { color: #888; font-size: 0.85em; }
+        .compare-row .metric-value { font-weight: 600; }
+
+        .diff-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 10px;
+            border-left: 1px solid rgba(255,255,255,0.08);
+            border-right: 1px solid rgba(255,255,255,0.08);
+            min-width: 140px;
+        }
+
+        .diff-column h3 {
+            color: #7b2ff7;
+            font-size: 1.2em;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(123, 47, 247, 0.2);
+            text-align: center;
+            width: 100%;
+        }
+
+        .diff-value {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-weight: 600;
+            text-align: center;
+            width: 100%;
+        }
+
+        .diff-positive { color: #00ff88; }
+        .diff-negative { color: #ff4466; }
+        .diff-neutral { color: #888; }
+
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr 1fr; }
             .results-grid { grid-template-columns: 1fr 1fr; }
@@ -586,6 +648,47 @@ HTML_TEMPLATE = '''
                     <input type="hidden" name="result_data" value='{{ result_json }}'>
                     <button type="submit" class="btn btn-primary">Save Calculation</button>
                 </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if comparison %}
+        <div class="card">
+            <div class="card-header">
+                <h2>Comparison</h2>
+                <span style="color: #888;">{{ comparison.calc_a.name }} vs {{ comparison.calc_b.name }}</span>
+            </div>
+            <div class="compare-container">
+                <div class="compare-column">
+                    <h3>{{ comparison.calc_a.name }}</h3>
+                    {% for d in comparison.diffs %}
+                    <div class="compare-row">
+                        <span class="metric-label">{{ d.label }}</span>
+                        <span class="metric-value">
+                            {% if d.is_pct %}{{ "%.1f"|format(d.val_a) }}%{% elif d.is_money %}${{ d.val_a|money }}{% else %}{{ "{:,.0f}"|format(d.val_a) }}{% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="diff-column">
+                    <h3>Difference</h3>
+                    {% for d in comparison.diffs %}
+                    <div class="diff-value {{ 'diff-neutral' if d.is_zero else ('diff-positive' if d.is_positive else 'diff-negative') }}">
+                        {% if d.is_zero %}&mdash;{% elif d.diff > 0 %}+{% endif %}{% if d.is_pct %}{{ "%.1f"|format(d.diff) }}%{% elif d.is_money %}${{ d.diff|money }}{% else %}{{ "{:,.0f}"|format(d.diff) }}{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="compare-column">
+                    <h3>{{ comparison.calc_b.name }}</h3>
+                    {% for d in comparison.diffs %}
+                    <div class="compare-row">
+                        <span class="metric-label">{{ d.label }}</span>
+                        <span class="metric-value">
+                            {% if d.is_pct %}{{ "%.1f"|format(d.val_b) }}%{% elif d.is_money %}${{ d.val_b|money }}{% else %}{{ "{:,.0f}"|format(d.val_b) }}{% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
         {% endif %}
