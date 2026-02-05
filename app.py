@@ -273,6 +273,27 @@ HTML_TEMPLATE = '''
             color: #666;
         }
 
+        /* Comparison checkbox */
+        .compare-checkbox {
+            width: 18px;
+            height: 18px;
+            accent-color: #00d4ff;
+            cursor: pointer;
+        }
+
+        .btn-compare {
+            background: linear-gradient(90deg, #7b2ff7, #00d4ff);
+            color: white;
+            margin-left: 10px;
+        }
+
+        .btn-compare:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr 1fr; }
             .results-grid { grid-template-columns: 1fr 1fr; }
@@ -368,39 +389,73 @@ HTML_TEMPLATE = '''
                 <h2>Saved Calculations</h2>
                 <span style="color: #888;">{{ calculations|length }} record(s)</span>
             </div>
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Units</th>
-                        <th>Cost/Unit</th>
-                        <th>Sell Price</th>
-                        <th>Margin</th>
-                        <th>Total Profit</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for calc in calculations %}
-                    <tr>
-                        <td class="name">{{ calc.name }}</td>
-                        <td>{{ calc.units }}</td>
-                        <td>${{ calc.cost_per_unit|money }}</td>
-                        <td>${{ calc.selling_price|money }}</td>
-                        <td>{{ "%.1f"|format(calc.profit_margin) }}%</td>
-                        <td class="{{ 'profit-positive' if calc.gross_profit >= 0 else 'profit-negative' }}">
-                            ${{ calc.gross_profit|money }}
-                        </td>
-                        <td>
-                            <form method="POST" action="/delete/{{ loop.index0 }}" style="display:inline;">
-                                <button type="submit" class="btn btn-danger btn-small">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <form method="POST" action="/compare" id="compareForm">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Compare</th>
+                            <th>Name</th>
+                            <th>Units</th>
+                            <th>Cost/Unit</th>
+                            <th>Sell Price</th>
+                            <th>Margin</th>
+                            <th>Total Profit</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for calc in calculations %}
+                        <tr>
+                            <td><input type="checkbox" name="compare" value="{{ loop.index0 }}" class="compare-checkbox"></td>
+                            <td class="name">{{ calc.name }}</td>
+                            <td>{{ calc.units }}</td>
+                            <td>${{ calc.cost_per_unit|money }}</td>
+                            <td>${{ calc.selling_price|money }}</td>
+                            <td>{{ "%.1f"|format(calc.profit_margin) }}%</td>
+                            <td class="{{ 'profit-positive' if calc.gross_profit >= 0 else 'profit-negative' }}">
+                                ${{ calc.gross_profit|money }}
+                            </td>
+                            <td>
+                                <form method="POST" action="/delete/{{ loop.index0 }}" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-small">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div style="margin-top: 15px;">
+                    <button type="submit" class="btn btn-compare btn-small" id="compareBtn" disabled>Compare Selected</button>
+                    <span id="compareHint" style="color: #666; margin-left: 10px; font-size: 0.85em;">Select exactly 2 calculations to compare</span>
+                </div>
+            </form>
         </div>
+
+        <script>
+        (function() {
+            var checkboxes = document.querySelectorAll('.compare-checkbox');
+            var btn = document.getElementById('compareBtn');
+            var hint = document.getElementById('compareHint');
+
+            checkboxes.forEach(function(cb) {
+                cb.addEventListener('change', function() {
+                    var checked = document.querySelectorAll('.compare-checkbox:checked');
+                    if (checked.length > 2) {
+                        this.checked = false;
+                        return;
+                    }
+                    btn.disabled = checked.length !== 2;
+                    if (checked.length === 2) {
+                        hint.textContent = 'Ready to compare!';
+                        hint.style.color = '#00ff88';
+                    } else {
+                        hint.textContent = 'Select exactly 2 calculations to compare';
+                        hint.style.color = '#666';
+                    }
+                });
+            });
+        })();
+        </script>
         {% endif %}
 
         {% if result %}
@@ -542,7 +597,7 @@ HTML_TEMPLATE = '''
 @app.route('/')
 def index():
     calculations = load_calculations()
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='', form_data={})
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='', form_data={}, comparison=None)
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
@@ -584,7 +639,61 @@ def calculate():
     result['other_cost_name'] = form_data['other_cost_name']
 
     calculations = load_calculations()
-    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=result, result_json=json.dumps(result), form_data=form_data)
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=result, result_json=json.dumps(result), form_data=form_data, comparison=None)
+
+@app.route('/compare', methods=['POST'])
+def compare():
+    indices = request.form.getlist('compare')
+    calculations = load_calculations()
+
+    if len(indices) != 2:
+        return redirect(url_for('index'))
+
+    idx_a, idx_b = int(indices[0]), int(indices[1])
+    if not (0 <= idx_a < len(calculations) and 0 <= idx_b < len(calculations)):
+        return redirect(url_for('index'))
+
+    calc_a = calculations[idx_a]
+    calc_b = calculations[idx_b]
+
+    metrics = [
+        ('Units', 'units', False),
+        ('Cost per Unit', 'cost_per_unit', True),
+        ('Selling Price', 'selling_price', False),
+        ('Total Costs', 'total_costs', True),
+        ('Total Revenue', 'total_revenue', False),
+        ('Gross Profit', 'gross_profit', False),
+        ('Profit Margin (%)', 'profit_margin', False),
+        ('Break-even Price', 'breakeven_price', True),
+    ]
+
+    diffs = []
+    for label, key, lower_is_better in metrics:
+        val_a = calc_a.get(key, 0)
+        val_b = calc_b.get(key, 0)
+        diff = val_b - val_a
+        if lower_is_better:
+            is_positive = diff < 0
+        else:
+            is_positive = diff > 0
+        diffs.append({
+            'label': label,
+            'val_a': val_a,
+            'val_b': val_b,
+            'diff': diff,
+            'is_positive': is_positive,
+            'is_zero': diff == 0,
+            'is_money': key not in ('units', 'profit_margin'),
+            'is_pct': key == 'profit_margin',
+        })
+
+    comparison = {
+        'calc_a': calc_a,
+        'calc_b': calc_b,
+        'diffs': diffs,
+    }
+
+    return render_template_string(HTML_TEMPLATE, calculations=calculations, result=None, result_json='', form_data={}, comparison=comparison)
 
 @app.route('/save', methods=['POST'])
 def save():
